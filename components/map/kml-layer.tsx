@@ -88,11 +88,19 @@ function polygonPositions(geometry: Feature["geometry"]) {
 }
 
 function popupTitle(properties: Record<string, any>, fallback: string) {
-  return properties.name || properties.Name || fallback
+  const title = properties.name || properties.Name || fallback
+  return typeof title === "string" ? title : fallback
 }
 
 function popupDescription(properties: Record<string, any>) {
-  return properties.description || properties.Description || ""
+  const description = properties.description || properties.Description || ""
+  return typeof description === "string" ? description.trim() : ""
+}
+
+function popupImages(properties: Record<string, any>) {
+  if (Array.isArray(properties.images)) return properties.images.filter((item) => typeof item === "string" && item.trim())
+  if (typeof properties.image === "string" && properties.image.trim()) return [properties.image.trim()]
+  return []
 }
 
 function safeIcon(iconUrl?: string) {
@@ -104,6 +112,30 @@ function safeIcon(iconUrl?: string) {
     iconAnchor: [12, 12],
     popupAnchor: [0, -13],
   })
+}
+
+function FeaturePopup({ properties, fallback, kind = "point" }: { properties: Record<string, any>; fallback: string; kind?: "point" | "route" | "zone" }) {
+  const title = popupTitle(properties, fallback)
+  const description = kind === "point" ? popupDescription(properties) : ""
+  const images = kind === "point" ? popupImages(properties) : []
+  const hasExtraContent = Boolean(description || images.length)
+
+  return (
+    <Popup className={hasExtraContent ? "centered-popup rich-popup" : "centered-popup compact-popup"} maxWidth={380} minWidth={hasExtraContent ? 280 : 220} autoPanPadding={[18, 18]}>
+      <article className={hasExtraContent ? "rrm-popup-card rrm-popup-card-rich" : "rrm-popup-card"}>
+        {images[0] && (
+          <figure className="rrm-popup-media">
+            <img src={images[0]} alt="" loading="lazy" />
+          </figure>
+        )}
+
+        <div className="rrm-popup-body">
+          <h3>{title}</h3>
+          {description && <div className="rrm-popup-description" dangerouslySetInnerHTML={{ __html: description }} />}
+        </div>
+      </article>
+    </Popup>
+  )
 }
 
 export default function KMLLayer({ url, showRoutes = true, showZones = true, showPOIs = true }: KMLLayerProps) {
@@ -194,12 +226,7 @@ export default function KMLLayer({ url, showRoutes = true, showZones = true, sho
                   },
                 }}
               >
-                <Popup className="centered-popup">
-                  <div className="custom-popup-content">
-                    <h3>{popupTitle(properties, `Point ${index + 1}`)}</h3>
-                    {popupDescription(properties) && <div dangerouslySetInnerHTML={{ __html: popupDescription(properties) }} />}
-                  </div>
-                </Popup>
+                <FeaturePopup properties={properties} fallback={`Point ${index + 1}`} kind="point" />
               </Marker>
             )
           })}
@@ -220,12 +247,7 @@ export default function KMLLayer({ url, showRoutes = true, showZones = true, sho
                 positions={positionSet as any}
                 pathOptions={{ color, weight, opacity, lineJoin: "round", lineCap: "round" }}
               >
-                <Popup className="centered-popup">
-                  <div className="custom-popup-content">
-                    <h3>{popupTitle(properties, `Route ${index + 1}`)}</h3>
-                    {popupDescription(properties) && <div dangerouslySetInnerHTML={{ __html: popupDescription(properties) }} />}
-                  </div>
-                </Popup>
+                <FeaturePopup properties={properties} fallback={`Route ${index + 1}`} kind="route" />
               </Polyline>
             ))
           })}
@@ -248,12 +270,7 @@ export default function KMLLayer({ url, showRoutes = true, showZones = true, sho
                 positions={positionSet as any}
                 pathOptions={{ color, fillColor, weight, opacity, fillOpacity }}
               >
-                <Popup className="centered-popup">
-                  <div className="custom-popup-content">
-                    <h3>{popupTitle(properties, `Zone ${index + 1}`)}</h3>
-                    {popupDescription(properties) && <div dangerouslySetInnerHTML={{ __html: popupDescription(properties) }} />}
-                  </div>
-                </Popup>
+                <FeaturePopup properties={properties} fallback={`Zone ${index + 1}`} kind="zone" />
               </Polygon>
             ))
           })}

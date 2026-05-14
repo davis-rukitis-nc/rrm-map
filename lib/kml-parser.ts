@@ -18,6 +18,7 @@ export async function parseKML(url: string) {
 
     const geoJSON = toGeoJSON.kml(kml)
     processStyles(kml, geoJSON)
+    processPlacemarkContent(kml, geoJSON)
 
     return geoJSON
   } catch (error) {
@@ -74,6 +75,83 @@ function processStyles(kml: Document, geoJSON: any) {
       })
     }
   })
+}
+
+function processPlacemarkContent(kml: Document, geoJSON: any) {
+  const placemarks = Array.from(kml.getElementsByTagName("Placemark")).filter(placemarkHasGeometry)
+  let placemarkIndex = 0
+
+  geoJSON.features?.forEach((feature: any) => {
+    if (!feature.properties) feature.properties = {}
+
+    const placemark = placemarks[placemarkIndex]
+    placemarkIndex += 1
+
+    if (!placemark) return
+
+    const meta = extractPlacemarkMeta(placemark)
+
+    if (meta.name) feature.properties.name = meta.name
+    if (meta.description) feature.properties.description = meta.description
+    if (meta.images.length) feature.properties.images = meta.images
+    if (meta.images.length || meta.description) feature.properties.hasExtraContent = true
+  })
+}
+
+function placemarkHasGeometry(placemark: Element) {
+  return Boolean(
+    placemark.getElementsByTagName("Point")[0] ||
+      placemark.getElementsByTagName("LineString")[0] ||
+      placemark.getElementsByTagName("Polygon")[0] ||
+      placemark.getElementsByTagName("MultiGeometry")[0],
+  )
+}
+
+function extractPlacemarkMeta(placemark: Element) {
+  const name = directChildText(placemark, "name")
+  const description = directChildText(placemark, "description")
+  const imageElements = [
+    ...Array.from(placemark.getElementsByTagName("gx:imageUrl")),
+    ...Array.from(placemark.getElementsByTagNameNS("*", "imageUrl")),
+  ]
+  const images = imageElements
+    .map((image) => image.textContent?.trim() || "")
+    .filter(Boolean)
+    .map(normalizeImageUrl)
+
+  return {
+    name,
+    description: normalizeDescription(description),
+    images: Array.from(new Set(images)),
+  }
+}
+
+function directChildText(parent: Element, tagName: string) {
+  for (let i = 0; i < parent.childNodes.length; i++) {
+    const node = parent.childNodes[i]
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      const element = node as Element
+      if (element.localName === tagName || element.tagName === tagName) {
+        return element.textContent?.trim() || ""
+      }
+    }
+  }
+
+  return ""
+}
+
+function normalizeDescription(value: unknown) {
+  if (typeof value !== "string") return ""
+
+  return value
+    .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "")
+    .replace(/\son\w+=("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
+    .replace(/javascript:/gi, "")
+    .trim()
+}
+
+function normalizeImageUrl(value: string) {
+  return value.replace("{size}", "720").replace(/&amp;/g, "&")
 }
 
 function extractStyleProperties(styleElement: Element): Record<string, any> {
