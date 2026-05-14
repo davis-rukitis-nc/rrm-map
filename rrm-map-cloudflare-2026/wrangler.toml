@@ -1,6 +1,0 @@
-name = "rrm-map-2026"
-compatibility_date = "2026-05-14"
-
-[assets]
-directory = "./out"
-not_found_handling = "single-page-application"
