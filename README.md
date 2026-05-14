@@ -1,6 +1,6 @@
-# Rimi Riga Marathon 2026 Map — Cloudflare Worker Assets
+# Rimi Riga Marathon 2026 Map
 
-Cloudflare-ready static Next.js export for the Rimi Riga Marathon map embed.
+Static Next.js for the Rimi Riga Marathon map embed.
 
 ## Cloudflare settings
 
