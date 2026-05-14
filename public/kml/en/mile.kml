@@ -945,7 +945,7 @@
 			</Placemark>
 			<Placemark id="027DC3638B3F3CB1002E">
 				<name>Latvian National Museum of Art</name>
-				<description><![CDATA[<div><b>The Latvian National Museum of Art</b> is one of Riga’s key cultural stops. Its main building, opened in 1905, was the first purpose-built art museum building in the Baltics.<br></div>]]></description>
+				<description><![CDATA[<div><b>The Latvian National Museum of Art</b> is one of Riga’s key cultural stops. Its main building, opened in 1905, was the first purpose-built art museum building in the Baltics.</div>]]></description>
 				<LookAt>
 					<longitude>24.10286969201809</longitude>
 					<latitude>56.94753289055387</latitude>
@@ -968,7 +968,7 @@
 			</Placemark>
 			<Placemark id="0319D653143F3CB14DB3">
 				<name>Freedom Monument</name>
-				<description><![CDATA[<div><b>The Freedom Monument</b> is one of Latvia’s strongest symbols of independence – a place where Riga’s heart beats especially loud.<br></div><div><br></div><div>In 2023, two world records were set at the foot of the monument during the World Athletics Road Running Championships Riga23. <b>The women’s road mile world record, 4:20.98, still stands today.</b><br></div>]]></description>
+				<description><![CDATA[<div><b>The Freedom Monument</b> is one of Latvia’s strongest symbols of independence – a place where Riga’s heart beats especially loud.</div><div>In 2023, two world records were set at the foot of the monument during the World Athletics Road Running Championships Riga23. <b>The women’s road mile world record, 4:20.98, still stands today.</b></div>]]></description>
 				<LookAt>
 					<longitude>24.10286969201809</longitude>
 					<latitude>56.94753289055387</latitude>
