@@ -1,10 +1,10 @@
 {
-  "name": "my-v0-project",
+  "name": "rrm-map-2026-cloudflare",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node ./scripts/clean-before-build.mjs && next build && node ./scripts/clean-after-build.mjs",
     "start": "next start",
     "lint": "next lint"
   },

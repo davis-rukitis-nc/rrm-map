@@ -1,16 +1,109 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Marker, Popup, Polyline, Polygon, useMap } from "react-leaflet"
 import L from "leaflet"
-import { parseKML } from "@/lib/kml-parser"
 import { Loader2 } from "lucide-react"
+import { parseKML } from "@/lib/kml-parser"
 
 interface KMLLayerProps {
   url: string
   showRoutes?: boolean
   showZones?: boolean
   showPOIs?: boolean
+}
+
+type Feature = {
+  geometry?: {
+    type?: string
+    coordinates?: any
+    geometries?: Feature["geometry"][]
+  }
+  properties?: Record<string, any>
+}
+
+function extendBounds(bounds: L.LatLngBounds, geometry: Feature["geometry"]) {
+  if (!geometry) return
+
+  const type = geometry.type
+  const coordinates = geometry.coordinates
+
+  if (type === "Point" && Array.isArray(coordinates)) {
+    const [lng, lat] = coordinates
+    bounds.extend([lat, lng])
+    return
+  }
+
+  if (type === "LineString" && Array.isArray(coordinates)) {
+    coordinates.forEach((coord: number[]) => bounds.extend([coord[1], coord[0]]))
+    return
+  }
+
+  if (type === "MultiLineString" && Array.isArray(coordinates)) {
+    coordinates.flat().forEach((coord: number[]) => bounds.extend([coord[1], coord[0]]))
+    return
+  }
+
+  if (type === "Polygon" && Array.isArray(coordinates)) {
+    coordinates.flat().forEach((coord: number[]) => bounds.extend([coord[1], coord[0]]))
+    return
+  }
+
+  if (type === "MultiPolygon" && Array.isArray(coordinates)) {
+    coordinates.flat(2).forEach((coord: number[]) => bounds.extend([coord[1], coord[0]]))
+    return
+  }
+
+  if (type === "GeometryCollection" && Array.isArray(geometry.geometries)) {
+    geometry.geometries.forEach((item) => extendBounds(bounds, item))
+  }
+}
+
+function linePositions(geometry: Feature["geometry"]) {
+  if (!geometry) return []
+
+  if (geometry.type === "LineString") {
+    return [geometry.coordinates.map((coord: number[]) => [coord[1], coord[0]])]
+  }
+
+  if (geometry.type === "MultiLineString") {
+    return geometry.coordinates.map((line: number[][]) => line.map((coord) => [coord[1], coord[0]]))
+  }
+
+  return []
+}
+
+function polygonPositions(geometry: Feature["geometry"]) {
+  if (!geometry) return []
+
+  if (geometry.type === "Polygon") {
+    return [geometry.coordinates.map((ring: number[][]) => ring.map((coord) => [coord[1], coord[0]]))]
+  }
+
+  if (geometry.type === "MultiPolygon") {
+    return geometry.coordinates.map((polygon: number[][][]) => polygon.map((ring) => ring.map((coord) => [coord[1], coord[0]])))
+  }
+
+  return []
+}
+
+function popupTitle(properties: Record<string, any>, fallback: string) {
+  return properties.name || properties.Name || fallback
+}
+
+function popupDescription(properties: Record<string, any>) {
+  return properties.description || properties.Description || ""
+}
+
+function safeIcon(iconUrl?: string) {
+  if (!iconUrl) return undefined
+
+  return L.icon({
+    iconUrl,
+    iconSize: [25, 25],
+    iconAnchor: [12, 12],
+    popupAnchor: [0, -13],
+  })
 }
 
 export default function KMLLayer({ url, showRoutes = true, showZones = true, showPOIs = true }: KMLLayerProps) {
@@ -20,188 +113,149 @@ export default function KMLLayer({ url, showRoutes = true, showZones = true, sho
   const map = useMap()
 
   useEffect(() => {
-    const loadKML = async () => {
+    let cancelled = false
+
+    async function loadKML() {
       try {
         setLoading(true)
-        const data = await parseKML(url)
-        setKmlData(data)
         setError(null)
 
-        // Fit map to KML data bounds after loading
-        if (data && data.features && data.features.length > 0) {
-          const bounds = L.latLngBounds([])
+        const data = await parseKML(url)
+        if (cancelled) return
 
-          data.features.forEach((feature: any) => {
-            if (feature.geometry.type === "Point") {
-              const [lng, lat] = feature.geometry.coordinates
-              bounds.extend([lat, lng])
-            } else if (feature.geometry.type === "LineString") {
-              feature.geometry.coordinates.forEach((coord: number[]) => {
-                bounds.extend([coord[1], coord[0]])
-              })
-            } else if (feature.geometry.type === "Polygon") {
-              feature.geometry.coordinates[0].forEach((coord: number[]) => {
-                bounds.extend([coord[1], coord[0]])
-              })
-            }
+        setKmlData(data)
+
+        const bounds = L.latLngBounds([])
+        data.features?.forEach((feature: Feature) => extendBounds(bounds, feature.geometry))
+
+        if (bounds.isValid()) {
+          window.requestAnimationFrame(() => {
+            map.fitBounds(bounds, {
+              paddingTopLeft: [24, 92],
+              paddingBottomRight: [24, 30],
+              maxZoom: 15.5,
+            })
           })
-
-          if (bounds.isValid()) {
-            // Add padding to ensure all elements are visible
-            map.fitBounds(bounds, { padding: [50, 50] })
-          }
         }
       } catch (err) {
-        console.error("Error loading KML:", err)
-        setError("Failed to load KML data")
+        if (!cancelled) {
+          console.error("Error loading KML:", err)
+          setError("Failed to load KML data")
+        }
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     }
 
     loadKML()
+
+    return () => {
+      cancelled = true
+    }
   }, [url, map])
+
+  const features = useMemo<Feature[]>(() => kmlData?.features || [], [kmlData])
 
   if (loading) {
     return (
-      <div className="absolute left-1/2 top-1/2 z-[1000] -translate-x-1/2 -translate-y-1/2 rounded-md bg-white/80 p-3 shadow-md">
-        <Loader2 className="h-6 w-6 animate-spin text-slate-600" />
+      <div className="rrm-map-loader" role="status" aria-live="polite">
+        <Loader2 className="h-6 w-6 animate-spin" />
       </div>
     )
   }
 
   if (error) {
-    return (
-      <div className="absolute left-1/2 top-1/2 z-[1000] -translate-x-1/2 -translate-y-1/2 rounded-md bg-white/90 p-3 text-sm text-red-500 shadow-md">
-        Error loading map data
-      </div>
-    )
+    return <div className="rrm-map-error">Error loading map data</div>
   }
 
-  if (!kmlData) return null
-
-  // Render the KML features
   return (
     <>
-      {/* Render Points (Placemarks) */}
       {showPOIs &&
-        kmlData.features
-          .filter((feature: any) => feature.geometry.type === "Point")
-          .map((feature: any, index: number) => {
-            const coordinates = feature.geometry.coordinates
+        features
+          .filter((feature) => feature.geometry?.type === "Point")
+          .map((feature, index) => {
+            const coordinates = feature.geometry?.coordinates
             const properties = feature.properties || {}
-
-            // Extract icon information if available
-            let icon = null
-            if (properties.icon) {
-              icon = L.icon({
-                iconUrl: properties.icon,
-                iconSize: [24, 24], // Smaller icons
-                iconAnchor: [12, 12], // Center the icon
-                popupAnchor: [0, -12], // Position popup above the icon
-              })
-            }
+            if (!Array.isArray(coordinates)) return null
 
             return (
               <Marker
-                key={`poi-${index}`}
+                key={`poi-${url}-${index}`}
                 position={[coordinates[1], coordinates[0]]}
-                icon={icon || undefined}
-                // Add proper ARIA attributes for accessibility
+                icon={safeIcon(properties.icon)}
                 eventHandlers={{
-                  add: (e) => {
-                    // Ensure marker elements don't inherit aria-hidden
-                    const el = e.target.getElement()
-                    if (el) {
-                      el.setAttribute("aria-hidden", "false")
-                      el.setAttribute("role", "img")
-                      el.setAttribute("aria-label", properties.name || `Point of interest ${index + 1}`)
+                  add: (event) => {
+                    const element = event.target.getElement()
+                    if (element) {
+                      element.setAttribute("aria-hidden", "false")
+                      element.setAttribute("role", "img")
+                      element.setAttribute("aria-label", popupTitle(properties, `Point of interest ${index + 1}`))
                     }
                   },
                 }}
               >
                 <Popup className="centered-popup">
                   <div className="custom-popup-content">
-                    <h3>{properties.name || `Point ${index + 1}`}</h3>
-                    {properties.description && <div dangerouslySetInnerHTML={{ __html: properties.description }} />}
+                    <h3>{popupTitle(properties, `Point ${index + 1}`)}</h3>
+                    {popupDescription(properties) && <div dangerouslySetInnerHTML={{ __html: popupDescription(properties) }} />}
                   </div>
                 </Popup>
               </Marker>
             )
           })}
 
-      {/* Render LineStrings (Routes) */}
       {showRoutes &&
-        kmlData.features
-          .filter((feature: any) => feature.geometry.type === "LineString")
-          .map((feature: any, index: number) => {
-            const coordinates = feature.geometry.coordinates.map((coord: number[]) => [coord[1], coord[0]])
+        features
+          .filter((feature) => ["LineString", "MultiLineString"].includes(feature.geometry?.type || ""))
+          .flatMap((feature, index) => {
             const properties = feature.properties || {}
+            const positions = linePositions(feature.geometry)
+            const color = properties.stroke || "#cc2328"
+            const weight = Math.max(Number(properties.strokeWidth || 4), 3)
+            const opacity = properties.strokeOpacity ?? 0.86
 
-            // Extract style information if available
-            const color = properties.stroke || "#64748b"
-            const weight = properties.strokeWidth || 3 // Slightly thinner lines
-            const opacity = properties.strokeOpacity || 0.8
-
-            return (
+            return positions.map((positionSet, subIndex) => (
               <Polyline
-                key={`route-${index}`}
-                positions={coordinates}
-                pathOptions={{
-                  color,
-                  weight,
-                  opacity,
-                  lineJoin: "round",
-                }}
+                key={`route-${url}-${index}-${subIndex}`}
+                positions={positionSet as any}
+                pathOptions={{ color, weight, opacity, lineJoin: "round", lineCap: "round" }}
               >
                 <Popup className="centered-popup">
                   <div className="custom-popup-content">
-                    <h3>{properties.name || `Route ${index + 1}`}</h3>
-                    {properties.description && <div dangerouslySetInnerHTML={{ __html: properties.description }} />}
+                    <h3>{popupTitle(properties, `Route ${index + 1}`)}</h3>
+                    {popupDescription(properties) && <div dangerouslySetInnerHTML={{ __html: popupDescription(properties) }} />}
                   </div>
                 </Popup>
               </Polyline>
-            )
+            ))
           })}
 
-      {/* Render Polygons (Zones) */}
       {showZones &&
-        kmlData.features
-          .filter((feature: any) => feature.geometry.type === "Polygon")
-          .map((feature: any, index: number) => {
-            // Convert coordinates format for Leaflet
-            const coordinates = feature.geometry.coordinates.map((ring: number[][]) =>
-              ring.map((coord: number[]) => [coord[1], coord[0]]),
-            )
+        features
+          .filter((feature) => ["Polygon", "MultiPolygon"].includes(feature.geometry?.type || ""))
+          .flatMap((feature, index) => {
             const properties = feature.properties || {}
+            const positions = polygonPositions(feature.geometry)
+            const color = properties.stroke || "#59344e"
+            const fillColor = properties.fill || "#f2dfb6"
+            const weight = Math.max(Number(properties.strokeWidth || 1), 1)
+            const opacity = properties.strokeOpacity ?? 0.7
+            const fillOpacity = properties.fillOpacity ?? 0.22
 
-            // Extract style information if available
-            const color = properties.stroke || "#64748b"
-            const fillColor = properties.fill || "rgba(100, 116, 139, 0.3)"
-            const weight = properties.strokeWidth || 1 // Thinner borders
-            const opacity = properties.strokeOpacity || 0.7
-            const fillOpacity = properties.fillOpacity || 0.2 // More subtle fill
-
-            return (
+            return positions.map((positionSet, subIndex) => (
               <Polygon
-                key={`zone-${index}`}
-                positions={coordinates}
-                pathOptions={{
-                  color,
-                  fillColor,
-                  weight,
-                  opacity,
-                  fillOpacity,
-                }}
+                key={`zone-${url}-${index}-${subIndex}`}
+                positions={positionSet as any}
+                pathOptions={{ color, fillColor, weight, opacity, fillOpacity }}
               >
                 <Popup className="centered-popup">
                   <div className="custom-popup-content">
-                    <h3>{properties.name || `Zone ${index + 1}`}</h3>
-                    {properties.description && <div dangerouslySetInnerHTML={{ __html: properties.description }} />}
+                    <h3>{popupTitle(properties, `Zone ${index + 1}`)}</h3>
+                    {popupDescription(properties) && <div dangerouslySetInnerHTML={{ __html: popupDescription(properties) }} />}
                   </div>
                 </Popup>
               </Polygon>
-            )
+            ))
           })}
     </>
   )

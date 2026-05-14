@@ -315,6 +315,35 @@ function LocationButton({
   )
 }
 
+
+// Keeps Leaflet sized correctly in responsive iframes and after parent layout changes.
+function ResizeInvalidator() {
+  const map = useMap()
+
+  useEffect(() => {
+    const invalidate = () => map.invalidateSize({ animate: false })
+    const frame = window.requestAnimationFrame(invalidate)
+
+    window.addEventListener("resize", invalidate)
+
+    const container = map.getContainer()
+    let observer: ResizeObserver | null = null
+
+    if ("ResizeObserver" in window) {
+      observer = new ResizeObserver(invalidate)
+      observer.observe(container)
+    }
+
+    return () => {
+      window.cancelAnimationFrame(frame)
+      window.removeEventListener("resize", invalidate)
+      observer?.disconnect()
+    }
+  }, [map])
+
+  return null
+}
+
 // Map Boundary Control Component
 function MapBoundaryControl() {
   const map = useMap()
@@ -490,6 +519,7 @@ export default function MapComponent({
           translations={translations}
           onLocationFound={handleLocationFound}
         />
+        <ResizeInvalidator />
         <MapBoundaryControl />
       </MapContainer>
     </div>

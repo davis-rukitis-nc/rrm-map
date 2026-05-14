@@ -1,62 +1,43 @@
-# Rimi Riga Marathon 2026 Map
+# Rimi Riga Marathon 2026 Map — Cloudflare Worker Assets
 
-Cloudflare-ready static Next.js export of the Rimi Riga Marathon route map.
+Cloudflare-ready static Next.js export for the Rimi Riga Marathon map embed.
 
-## What changed
+## Cloudflare settings
 
-- Updated all route KML files to the 2026 KML files in `public/kml`.
-- Removed the old hardcoded 2025 GitHub raw KML URLs.
-- Added English and Latvian KML sets:
-  - `/kml/en/marathon.kml`
-  - `/kml/en/half-marathon.kml`
-  - `/kml/en/10km.kml`
-  - `/kml/en/6km.kml`
-  - `/kml/en/mile.kml`
-  - `/kml/lv/marathon.kml`
-  - `/kml/lv/half-marathon.kml`
-  - `/kml/lv/10km.kml`
-  - `/kml/lv/6km.kml`
-  - `/kml/lv/mile.kml`
-- Changed the app to a static export so it can run cleanly on Cloudflare Pages or as a Cloudflare Workers static asset deployment.
-- Added SPA fallback support for `/lv`, query links, and refreshes.
+- Build command: `pnpm run build`
+- Deploy command: `npx wrangler deploy`
+- Assets/output directory: handled by `wrangler.toml` → `out`
 
-## URLs / embed options
+`wrangler.toml` uses Cloudflare Worker Assets with:
 
-Default English map:
+```toml
+[assets]
+directory = "./out"
+not_found_handling = "single-page-application"
+```
+
+Do not add a `/* /index.html 200` `_redirects` file. Cloudflare Workers Assets rejects that rule as an infinite-loop redirect. The SPA fallback above is what keeps `/lv` and direct URLs working.
+
+## URLs
+
+- English: `/`
+- Latvian: `/lv`
+- Preselect distance: `/?distance=21km` or `/lv?distance=10km`
+
+Accepted distance values: `42km`, `21km`, `10km`, `6km`, `mile`.
+
+## Embed examples
 
 ```html
 <iframe src="https://YOUR-MAP-DOMAIN/" style="width:100%;height:720px;border:0;display:block;" loading="lazy"></iframe>
 ```
 
-Latvian:
-
 ```html
 <iframe src="https://YOUR-MAP-DOMAIN/lv" style="width:100%;height:720px;border:0;display:block;" loading="lazy"></iframe>
 ```
 
-Specific distance:
+## Notes
 
-```html
-<iframe src="https://YOUR-MAP-DOMAIN/?distance=21km" style="width:100%;height:720px;border:0;display:block;" loading="lazy"></iframe>
-```
-
-Supported distance values: `42km`, `21km`, `10km`, `6km`, `mile`.
-
-## Cloudflare Workers static-assets deployment
-
-Use these settings if Cloudflare asks for build/deploy commands:
-
-- Build command: `pnpm build`
-- Deploy command: `npx wrangler deploy`
-- Output directory: `out`
-
-The included `wrangler.toml` points Wrangler at `./out`.
-
-## Cloudflare Pages deployment
-
-Use these settings:
-
-- Build command: `pnpm build`
-- Build output directory: `out`
-
-No server runtime is needed.
+- KML files live in `public/kml/en/` and `public/kml/lv/`.
+- The build script clears old `out`/`.next` output before each build and removes any accidental `_redirects`/`_headers` from `out` after export.
+- The map handles responsive iframe resizing and direct `/lv` loads through the Worker Assets SPA fallback.
