@@ -88,20 +88,20 @@
 /* Responsive RRM popup cards. Leaflet gives popups inline sizing, so the rules below
    deliberately target the generated wrapper/content elements as well as our own markup. */
 .centered-popup.leaflet-popup {
-  max-width: min(380px, calc(100vw - 32px)) !important;
+  max-width: min(420px, calc(100vw - 28px)) !important;
 }
 
 .centered-popup.compact-popup.leaflet-popup {
-  max-width: min(320px, calc(100vw - 32px)) !important;
+  max-width: min(320px, calc(100vw - 28px)) !important;
 }
 
 .centered-popup .leaflet-popup-content-wrapper {
-  width: min(380px, calc(100vw - 32px)) !important;
-  max-width: min(380px, calc(100vw - 32px)) !important;
+  width: min(420px, calc(100vw - 28px)) !important;
+  max-width: min(420px, calc(100vw - 28px)) !important;
   overflow: hidden;
   padding: 0 !important;
   border: 1px solid var(--rrm-line);
-  border-radius: 1.1rem !important;
+  border-radius: 1.12rem !important;
   background: #ffffff;
   box-shadow: 0 18px 46px rgba(35, 22, 31, 0.2) !important;
   text-align: left;
@@ -109,8 +109,8 @@
 
 .centered-popup.compact-popup .leaflet-popup-content-wrapper {
   width: auto !important;
-  min-width: min(260px, calc(100vw - 32px));
-  max-width: min(320px, calc(100vw - 32px)) !important;
+  min-width: min(250px, calc(100vw - 28px));
+  max-width: min(320px, calc(100vw - 28px)) !important;
 }
 
 .centered-popup .leaflet-popup-content {
@@ -132,7 +132,7 @@
   aspect-ratio: 16 / 9;
   margin: 0;
   overflow: hidden;
-  background: rgba(242, 223, 182, 0.35);
+  background: linear-gradient(135deg, rgba(242, 223, 182, 0.45), rgba(253, 249, 241, 0.95));
 }
 
 .rrm-popup-media img {
@@ -143,7 +143,7 @@
 }
 
 .rrm-popup-body {
-  padding: 0.9rem 2.65rem 0.95rem 1rem;
+  padding: 0.92rem 2.85rem 0.98rem 1rem;
 }
 
 .rrm-popup-card-rich .rrm-popup-body {
@@ -152,21 +152,21 @@
 
 .rrm-popup-body h3 {
   margin: 0;
+  max-width: calc(100% - 0.15rem);
   color: var(--rrm-purple);
   font-size: 1rem;
-  line-height: 1.18;
-  font-variation-settings: "ital" 0, "wght" 760, "wdth" 100;
+  line-height: 1.16;
+  font-variation-settings: "ital" 0, "wght" 780, "wdth" 100;
   letter-spacing: -0.01em;
+  hyphens: auto;
 }
 
 .rrm-popup-description {
   margin-top: 0.58rem;
-  max-height: 190px;
-  overflow-y: auto;
-  padding-right: 0.35rem;
   color: rgba(89, 52, 78, 0.82);
-  font-size: 0.9rem;
-  line-height: 1.5;
+  font-size: 0.92rem;
+  line-height: 1.48;
+  overflow: visible;
 }
 
 .rrm-popup-description div,
@@ -176,7 +176,12 @@
 
 .rrm-popup-description div + div,
 .rrm-popup-description p + p {
-  margin-top: 0.55rem;
+  margin-top: 0.65rem;
+}
+
+.rrm-popup-description b,
+.rrm-popup-description strong {
+  font-variation-settings: "ital" 0, "wght" 780, "wdth" 100;
 }
 
 .rrm-popup-description a {
@@ -209,7 +214,7 @@
   justify-content: center;
   border: 1px solid rgba(89, 52, 78, 0.16) !important;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.94) !important;
+  background: rgba(255, 255, 255, 0.96) !important;
   color: var(--rrm-purple) !important;
   font-size: 1.35rem !important;
   line-height: 1 !important;
@@ -220,6 +225,31 @@
   background: var(--rrm-red) !important;
   border-color: var(--rrm-red) !important;
   color: #ffffff !important;
+}
+
+@media (max-width: 480px) {
+  .centered-popup.leaflet-popup {
+    max-width: calc(100vw - 24px) !important;
+  }
+
+  .centered-popup .leaflet-popup-content-wrapper {
+    width: calc(100vw - 24px) !important;
+    max-width: calc(100vw - 24px) !important;
+  }
+
+  .centered-popup.compact-popup .leaflet-popup-content-wrapper {
+    width: auto !important;
+    min-width: min(245px, calc(100vw - 24px));
+  }
+
+  .rrm-popup-body {
+    padding: 0.86rem 2.75rem 0.9rem 0.9rem;
+  }
+
+  .rrm-popup-description {
+    font-size: 0.89rem;
+    line-height: 1.43;
+  }
 }
 
 .map-controls-bar {

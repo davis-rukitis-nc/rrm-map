@@ -1,6 +1,8 @@
 name = "rrm-map"
+main = "./worker.ts"
 compatibility_date = "2026-05-14"
 
 [assets]
 directory = "./out"
+binding = "ASSETS"
 not_found_handling = "single-page-application"

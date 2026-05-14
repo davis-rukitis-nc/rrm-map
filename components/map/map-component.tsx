@@ -98,11 +98,11 @@ function CustomZoomControl() {
   const map = useMap()
 
   const handleZoomIn = () => {
-    map.zoomIn()
+    map.zoomIn(0.5)
   }
 
   const handleZoomOut = () => {
-    map.zoomOut()
+    map.zoomOut(0.5)
   }
 
   return (
@@ -231,7 +231,7 @@ function LocationButton({
         const bounds = L.latLngBounds(RIGA_BOUNDS)
 
         if (bounds.contains(userLatLng)) {
-          map.flyTo(userLocation, 16)
+          map.flyTo(userLocation, 16, { duration: 0.85, easeLinearity: 0.22 })
           onLocationFound(userLocation, accuracy)
 
           // Start watching position for updates
@@ -263,7 +263,7 @@ function LocationButton({
             title: "Outside Riga",
             description: translations.errors.outsideRiga,
           })
-          map.flyTo([56.9496, 24.1052], 13)
+          map.flyTo([56.9496, 24.1052], 13, { duration: 0.85, easeLinearity: 0.22 })
         }
 
         setLoading(false)
@@ -482,6 +482,15 @@ export default function MapComponent({
         className="z-0"
         zoomControl={false} // We'll use our custom zoom control
         attributionControl={false} // Hide attribution for more space
+        zoomSnap={0.25}
+        zoomDelta={0.5}
+        wheelPxPerZoomLevel={120}
+        wheelDebounceTime={35}
+        inertia
+        inertiaDeceleration={2600}
+        zoomAnimation
+        markerZoomAnimation
+        fadeAnimation
         whenCreated={(map) => {
           mapRef.current = map
         }}

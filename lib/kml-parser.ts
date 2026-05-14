@@ -147,11 +147,24 @@ function normalizeDescription(value: unknown) {
     .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, "")
     .replace(/\son\w+=("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
     .replace(/javascript:/gi, "")
+    .replace(/<br\s*\/?>(\s*<br\s*\/?>)+/gi, "</p><p>")
+    .replace(/<div>\s*/gi, "<p>")
+    .replace(/\s*<\/div>/gi, "</p>")
+    .replace(/<p>\s*<\/p>/gi, "")
     .trim()
 }
 
 function normalizeImageUrl(value: string) {
-  return value.replace("{size}", "720").replace(/&amp;/g, "&")
+  const decoded = value.replace(/&amp;/g, "&").replace("{size}", "960")
+
+  // Google Earth exports gx:imageUrl values from earth.usercontent.google.com.
+  // Those URLs can fail directly in embedded browsers, so Cloudflare proxies them
+  // at runtime through worker.ts while preserving cache headers.
+  if (/^https?:\/\//i.test(decoded)) {
+    return `/image-proxy?url=${encodeURIComponent(decoded)}`
+  }
+
+  return decoded
 }
 
 function extractStyleProperties(styleElement: Element): Record<string, any> {

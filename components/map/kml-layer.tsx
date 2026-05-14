@@ -114,6 +114,18 @@ function safeIcon(iconUrl?: string) {
   })
 }
 
+function PopupImage({ src, title }: { src: string; title: string }) {
+  const [failed, setFailed] = useState(false)
+
+  if (!src || failed) return null
+
+  return (
+    <figure className="rrm-popup-media">
+      <img src={src} alt={title ? `${title} image` : ""} loading="lazy" decoding="async" onError={() => setFailed(true)} />
+    </figure>
+  )
+}
+
 function FeaturePopup({ properties, fallback, kind = "point" }: { properties: Record<string, any>; fallback: string; kind?: "point" | "route" | "zone" }) {
   const title = popupTitle(properties, fallback)
   const description = kind === "point" ? popupDescription(properties) : ""
@@ -121,13 +133,16 @@ function FeaturePopup({ properties, fallback, kind = "point" }: { properties: Re
   const hasExtraContent = Boolean(description || images.length)
 
   return (
-    <Popup className={hasExtraContent ? "centered-popup rich-popup" : "centered-popup compact-popup"} maxWidth={380} minWidth={hasExtraContent ? 280 : 220} autoPanPadding={[18, 18]}>
+    <Popup
+      className={hasExtraContent ? "centered-popup rich-popup" : "centered-popup compact-popup"}
+      maxWidth={420}
+      minWidth={hasExtraContent ? 300 : 220}
+      autoPan
+      autoPanPadding={[22, 22]}
+      keepInView
+    >
       <article className={hasExtraContent ? "rrm-popup-card rrm-popup-card-rich" : "rrm-popup-card"}>
-        {images[0] && (
-          <figure className="rrm-popup-media">
-            <img src={images[0]} alt="" loading="lazy" />
-          </figure>
-        )}
+        {images[0] && <PopupImage src={images[0]} title={title} />}
 
         <div className="rrm-popup-body">
           <h3>{title}</h3>
@@ -162,10 +177,12 @@ export default function KMLLayer({ url, showRoutes = true, showZones = true, sho
 
         if (bounds.isValid()) {
           window.requestAnimationFrame(() => {
-            map.fitBounds(bounds, {
+            map.flyToBounds(bounds, {
               paddingTopLeft: [24, 92],
               paddingBottomRight: [24, 30],
               maxZoom: 15.5,
+              duration: 0.9,
+              easeLinearity: 0.22,
             })
           })
         }
